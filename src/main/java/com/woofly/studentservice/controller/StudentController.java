@@ -5,18 +5,21 @@ import com.woofly.studentservice.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
-@RequestMapping("/students")
+@RequestMapping("/api/students")
 @RequiredArgsConstructor
 public class StudentController {
 
     private final StudentRepository studentRepository;
 
+    @PostMapping
+    public Student createStudent(@RequestBody Student student) {
+        return studentRepository.save(student);
+    }
     // Feign Client bu endpoint-ə zəng edəcək
     @GetMapping("/{id}")
     public Student getStudentById(@PathVariable Long id) {
@@ -24,12 +27,9 @@ public class StudentController {
                 .orElseThrow(() -> new RuntimeException("Tələbə tapılmadı"));
     }
 
-    // TEST DATA: Proqram işə düşəndə avtomatik 1 tələbə yaratsın
-    @Bean
-    public CommandLineRunner initData() {
-        return args -> {
-            studentRepository.save(new Student(null, "Əli", "Vəliyev", "ali@mail.com"));
-            System.out.println("TEST DATA: Tələbə (ID: 1) bazaya əlavə edildi.");
-        };
+    @GetMapping("/course/{courseId}")
+    public List<Student> getStudentsByCourse(@PathVariable Long courseId) {
+        return studentRepository.findByCourseId(courseId);
     }
+
 }
