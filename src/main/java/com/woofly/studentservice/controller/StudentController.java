@@ -3,6 +3,7 @@ package com.woofly.studentservice.controller;
 import com.woofly.studentservice.model.Student;
 import com.woofly.studentservice.service.StudentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ public class StudentController {
 
     private final StudentService studentService;
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public Student createStudent(@RequestBody Student student) {
         return studentService.createStudent(student);
