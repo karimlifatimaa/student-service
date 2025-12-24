@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +25,8 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+
 
     @Override
     protected void doFilterInternal(
@@ -30,30 +34,42 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        log.info("JwtAuthFilter: Processing request for {}", request.getRequestURI());
+
 
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("JwtAuthFilter: No JWT token found in request headers or header does not start with Bearer. URI: {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
+        log.debug("JwtAuthFilter: Extracted JWT token: {}", token);
+
 
         try {
             String username = jwtService.extractUsername(token);
+            log.info("JwtAuthFilter: Extracted username from token: {}", username);
+
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                log.info("JwtAuthFilter: Security context is null, attempting to set authentication.");
 
                 if (jwtService.validateToken(token)) {
+                    log.info("JwtAuthFilter: JWT token is valid.");
                     setAuthentication(request, token, username);
+                    log.info("JwtAuthFilter: Authentication set for user: {}", username);
                 } else {
-                    logger.warn("JWT token is not valid");
+                    log.warn("JwtAuthFilter: JWT token is not valid for user: {}", username);
                 }
+            } else {
+                log.warn("JwtAuthFilter: Username is null or authentication is already set. Username: {}, Auth: {}", username, SecurityContextHolder.getContext().getAuthentication());
             }
 
         } catch (Exception ex) {
-            logger.warn("JWT authentication failed", ex);
+            log.error("JwtAuthFilter: JWT authentication failed", ex);
         }
 
         filterChain.doFilter(request, response);
@@ -66,6 +82,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     ) {
         Claims claims = jwtService.extractAllClaims(token);
         String role = claims.get("role", String.class);
+        log.info("JwtAuthFilter: Extracted role from token: {}", role);
+
 
         List<GrantedAuthority> authorities =
                 List.of(new SimpleGrantedAuthority(role));
@@ -78,5 +96,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("JwtAuthFilter: Successfully set authentication in security context for user '{}' with role '{}'", username, role);
     }
 }

@@ -15,7 +15,7 @@ public class StudentController {
 
     private final StudentService studentService;
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public Student createStudent(@RequestBody Student student) {
         return studentService.createStudent(student);
